@@ -11,6 +11,7 @@ class CreateUsers extends Migration
         $this->forge->addField([
             'id'       => ['type' => 'INT','unsigned' => true,'auto_increment' => true],
             'username' => ['type' => 'VARCHAR','constraint' => 100,'unique' => true],
+            'email'    => ['type' => 'VARCHAR','constraint' => 255,'unique' => true],
             'password' => ['type' => 'VARCHAR','constraint' => 255],
             'role'     => ['type' => 'ENUM','constraint' => ['admin','staff','customer'],'default' => 'customer'],
             'created_at' => ['type' => 'DATETIME','null' => true],

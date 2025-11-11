@@ -88,6 +88,7 @@ class Admin extends BaseController
             
             $data = [
                 'username' => $this->request->getPost('username'),
+                'email' => $this->request->getPost('email'),
                 'password' => password_hash($this->request->getPost('password'), PASSWORD_BCRYPT),
                 'role' => $this->request->getPost('role'),
                 'created_at' => date('Y-m-d H:i:s')

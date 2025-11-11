@@ -10,9 +10,11 @@ use CodeIgniter\Router\RouteCollection;
 $routes->get('/', 'Auth::login');
 
 // Authentication
-$routes->get('login', 'Auth::login');       
-$routes->post('login', 'Auth::loginPost');  
-$routes->get('logout', 'Auth::logout');     
+$routes->get('login', 'Auth::login');
+$routes->post('login', 'Auth::loginPost');
+$routes->get('register', 'Auth::register');
+$routes->post('register', 'Auth::registerPost');
+$routes->get('logout', 'Auth::logout');
 
 // Dashboards
 $routes->get('admin/dashboard', 'Admin::index', ['filter' => 'authGuard:admin']);
@@ -22,8 +24,8 @@ $routes->get('customer/dashboard', 'Customer::index', ['filter' => 'authGuard:cu
 // Admin Management Pages
 $routes->group('admin', ['filter' => 'authGuard:admin'], static function (RouteCollection $routes) {
     $routes->get('users', 'Admin::users');
-    $routes->get('users/add', 'Admin::addUser');
-    $routes->post('users/add', 'Admin::addUser');
+    $routes->get('addUser', 'Admin::addUser');
+    $routes->post('addUser', 'Admin::addUser');
     
     $routes->get('orders', 'Admin::orders');
     $routes->get('orders/(:num)/generate-barcode', 'BarcodeController::generateOrderBarcode/$1');
@@ -56,7 +58,10 @@ $routes->group('customer', ['filter' => 'authGuard:customer'], static function (
     $routes->get('orders', 'Customer::orders');
     $routes->get('orders/(:num)', 'Customer::orderDetail/$1');
     $routes->get('orders/(:num)/generate-barcode', 'BarcodeController::generateOrderBarcode/$1');
-    
+
+    $routes->get('addOrder', 'Customer::addOrder');
+    $routes->post('addOrder', 'Customer::addOrderPost');
+
     $routes->get('complaint', 'Customer::complaint');
     $routes->post('complaint', 'Customer::complaintPost');
 });

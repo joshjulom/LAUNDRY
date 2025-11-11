@@ -23,6 +23,11 @@
             </div>
             <button type="submit" class="btn btn-primary w-100">Login</button>
         </form>
+
+        <div class="text-center mt-3">
+            <p class="mb-1">Don't have an account?</p>
+            <a href="<?= site_url('register') ?>" class="btn btn-outline-primary btn-sm">Register as Customer</a>
+        </div>
     </div>
 </body>
 </html>

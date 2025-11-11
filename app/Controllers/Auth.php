@@ -44,6 +44,46 @@ class Auth extends BaseController
         return redirect()->to(site_url('login'));
     }
 
+    public function register()
+    {
+        return view('auth/register');
+    }
+
+    public function registerPost()
+    {
+        helper(['form']);
+        $session = session();
+
+        $rules = [
+            'username' => 'required|min_length[3]|max_length[50]|is_unique[users.username]',
+            'email' => 'required|valid_email|is_unique[users.email]',
+            'password' => 'required|min_length[6]',
+            'confirm_password' => 'required|matches[password]',
+        ];
+
+        if (!$this->validate($rules)) {
+            $session->setFlashdata('errors', $this->validator->getErrors());
+            $session->setFlashdata('old', $this->request->getPost());
+            return redirect()->back();
+        }
+
+        $userModel = new UserModel();
+        $data = [
+            'username' => $this->request->getPost('username'),
+            'email' => $this->request->getPost('email'),
+            'password' => password_hash($this->request->getPost('password'), PASSWORD_DEFAULT),
+            'role' => 'customer', // Default role for registration
+        ];
+
+        if ($userModel->insert($data)) {
+            $session->setFlashdata('success', 'Registration successful! Please login.');
+            return redirect()->to(site_url('login'));
+        } else {
+            $session->setFlashdata('error', 'Registration failed. Please try again.');
+            return redirect()->back();
+        }
+    }
+
     public function logout()
     {
         session()->destroy();

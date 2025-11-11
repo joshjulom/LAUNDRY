@@ -6,6 +6,8 @@ use App\Models\OrderAssignmentModel;
 use App\Models\OrderModel;
 use App\Models\OrderStatusHistoryModel;
 use App\Models\StaffIssueModel;
+use App\Models\UserModel;
+use App\Libraries\EmailService;
 
 class Staff extends BaseController
 {
@@ -22,6 +24,7 @@ class Staff extends BaseController
         $assignmentModel = new OrderAssignmentModel();
         $orderModel = new OrderModel();
 
+        // First try to get assigned orders
         $assignments = $assignmentModel
             ->where('staff_id', $staffId)
             ->where('active', 1)
@@ -33,9 +36,15 @@ class Staff extends BaseController
             $orders = $orderModel->whereIn('id', $orderIds)->findAll();
         }
 
+        // If no assigned orders, show all orders for staff to assign themselves
+        if (empty($orders)) {
+            $orders = $orderModel->findAll();
+        }
+
         return view('staff/orders', [
-            'title' => 'Assigned Orders',
+            'title' => 'Orders',
             'orders' => $orders,
+            'assignments' => $assignments,
         ]);
     }
 
@@ -60,6 +69,7 @@ class Staff extends BaseController
 
         $orderModel = new OrderModel();
         $historyModel = new OrderStatusHistoryModel();
+        $userModel = new UserModel();
 
         $order = $orderModel->find($orderId);
         if (!$order) {
@@ -73,15 +83,24 @@ class Staff extends BaseController
             return redirect()->back()->with('error', 'Invalid status');
         }
 
+        $oldStatus = $order['status'];
+
         $orderModel->update($orderId, ['status' => $newStatus]);
         $historyModel->insert([
             'order_id' => $orderId,
             'changed_by' => $staffId,
-            'old_status' => $order['status'],
+            'old_status' => $oldStatus,
             'new_status' => $newStatus,
             'note' => $note,
             'created_at' => date('Y-m-d H:i:s'),
         ]);
+
+        // Send email notification to customer
+        $user = $userModel->find($order['user_id']);
+        if ($user) {
+            $emailService = new EmailService();
+            $emailService->sendOrderStatusUpdate($order, $user, $oldStatus, $newStatus);
+        }
 
         return redirect()->to(site_url('staff/orders'))->with('success', 'Status updated');
     }

@@ -42,6 +42,40 @@ class Customer extends BaseController
         return view('customer/complaint', ['title' => 'Submit Complaint']);
     }
 
+    public function addOrder()
+    {
+        return view('customer/add_order', ['title' => 'Create New Order']);
+    }
+
+    public function addOrderPost()
+    {
+        $userId = session()->get('id');
+        $orderModel = new OrderModel();
+
+        $data = [
+            'user_id' => $userId,
+            'status' => 'pending',
+            'total_price' => $this->request->getPost('total_price'),
+            'due_date' => $this->request->getPost('due_date'),
+            'created_at' => date('Y-m-d H:i:s'),
+        ];
+
+        if ($orderModel->insert($data)) {
+            // Send order confirmation email
+            $emailService = new \App\Libraries\EmailService();
+            $orderData = $orderModel->find($orderModel->getInsertID());
+            $userModel = new \App\Models\UserModel();
+            $userData = $userModel->find($userId);
+
+            $emailService->sendOrderConfirmation($orderData, $userData);
+
+            return redirect()->to(site_url('customer/orders'))
+                ->with('success', 'Order created successfully! A confirmation email has been sent.');
+        } else {
+            return redirect()->back()->with('error', 'Failed to create order');
+        }
+    }
+
     public function complaintPost()
     {
         $userId = session()->get('id');
