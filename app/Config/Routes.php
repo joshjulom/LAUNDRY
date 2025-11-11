@@ -26,17 +26,17 @@ $routes->group('admin', ['filter' => 'authGuard:admin'], static function (RouteC
     $routes->get('users', 'Admin::users');
     $routes->get('addUser', 'Admin::addUser');
     $routes->post('addUser', 'Admin::addUser');
-    
+
     $routes->get('orders', 'Admin::orders');
-    $routes->get('orders/(:num)/generate-barcode', 'BarcodeController::generateOrderBarcode/$1');
-    
+    $routes->get('generate-barcode/(:num)', 'Admin::generateBarcode/$1');
+
     $routes->get('inventory', 'Admin::inventory');
     $routes->get('inventory/add', 'Admin::addInventoryItem');
     $routes->post('inventory/add', 'Admin::addInventoryItem');
     $routes->get('inventory/edit/(:num)', 'Admin::updateInventoryItem/$1');
     $routes->post('inventory/edit/(:num)', 'Admin::updateInventoryItem/$1');
     $routes->get('inventory/delete/(:num)', 'Admin::deleteInventoryItem/$1');
-    
+
     $routes->get('complaints', 'Admin::complaints');
     $routes->get('complaints/resolve/(:num)', 'Admin::resolveComplaint/$1');
 });
@@ -46,7 +46,6 @@ $routes->group('staff', ['filter' => 'authGuard:staff'], static function (RouteC
     $routes->get('orders', 'Staff::orders');
     $routes->get('orders/(:num)/status', 'Staff::updateStatus/$1');
     $routes->post('orders/(:num)/status', 'Staff::updateStatusPost/$1');
-    $routes->get('orders/(:num)/generate-barcode', 'BarcodeController::generateOrderBarcode/$1');
 
     $routes->get('issues/report', 'Staff::reportIssue');
     $routes->post('issues/report', 'Staff::reportIssuePost');
@@ -57,7 +56,6 @@ $routes->group('staff', ['filter' => 'authGuard:staff'], static function (RouteC
 $routes->group('customer', ['filter' => 'authGuard:customer'], static function (RouteCollection $routes) {
     $routes->get('orders', 'Customer::orders');
     $routes->get('orders/(:num)', 'Customer::orderDetail/$1');
-    $routes->get('orders/(:num)/generate-barcode', 'BarcodeController::generateOrderBarcode/$1');
 
     $routes->get('addOrder', 'Customer::addOrder');
     $routes->post('addOrder', 'Customer::addOrderPost');
@@ -65,11 +63,6 @@ $routes->group('customer', ['filter' => 'authGuard:customer'], static function (
     $routes->get('complaint', 'Customer::complaint');
     $routes->post('complaint', 'Customer::complaintPost');
 });
-
-// Barcode routes
-$routes->get('barcode/order/(:num)', 'BarcodeController::generateOrderBarcode/$1');
-$routes->get('barcode/scan', 'BarcodeController::scanBarcode');
-$routes->post('barcode/process', 'BarcodeController::processBarcode');
 
 // Chat routes
 $routes->get('chat', 'ChatController::index');

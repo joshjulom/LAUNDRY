@@ -111,19 +111,7 @@
 
 <!-- Quick Actions -->
 <div class="row g-4 mt-4">
-    <div class="col-md-6">
-        <div class="card shadow-lg border-0">
-            <div class="card-body">
-                <h5 class="card-title">
-                    <i class="bi bi-qr-code me-2"></i> Barcode Scanner
-                </h5>
-                <p class="card-text">Scan order barcodes for quick access</p>
-                <a href="<?= site_url('barcode/scan') ?>" class="btn btn-primary btn-sm">
-                    <i class="bi bi-camera me-1"></i> Open Scanner
-                </a>
-            </div>
-        </div>
-    </div>
+
     <div class="col-md-6">
         <div class="card shadow-lg border-0">
             <div class="card-body">

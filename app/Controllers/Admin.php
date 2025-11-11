@@ -167,13 +167,21 @@ class Admin extends BaseController
     public function resolveComplaint($id)
     {
         $complaintModel = new ComplaintModel();
-        
+
         $data = ['status' => 'resolved'];
-        
+
         if ($complaintModel->update($id, $data)) {
             return redirect()->to(site_url('admin/complaints'))->with('success', 'Complaint resolved successfully');
         } else {
             return redirect()->to(site_url('admin/complaints'))->with('error', 'Failed to resolve complaint');
         }
+    }
+
+    public function generateBarcode($orderId)
+    {
+        $barcodeService = new \App\Libraries\BarcodeService();
+        $barcodeHtml = $barcodeService->getBarcodeHtml($orderId);
+
+        return $this->response->setBody($barcodeHtml);
     }
 }

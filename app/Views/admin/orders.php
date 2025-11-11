@@ -6,9 +6,6 @@
         <i class="bi bi-receipt-cutoff me-2"></i> Orders
     </h2>
     <div>
-        <a href="<?= site_url('barcode/scan') ?>" class="btn btn-outline-secondary btn-sm me-2">
-            <i class="bi bi-qr-code me-1"></i> Scan Barcode
-        </a>
         <a href="#" class="btn btn-outline-secondary btn-sm me-2">
             <i class="bi bi-download me-1"></i> Export
         </a>
@@ -70,15 +67,15 @@
                             <td><?= date('M d, Y', strtotime($order['due_date'])) ?></td>
                             <td><?= date('M d, Y', strtotime($order['created_at'])) ?></td>
                             <td class="text-end">
-                                <a href="<?= site_url('barcode/order/' . $order['id']) ?>" class="btn btn-sm btn-outline-info me-1" title="Generate Barcode">
-                                    <i class="bi bi-qr-code"></i>
-                                </a>
                                 <a href="#" class="btn btn-sm btn-outline-secondary me-1" title="View Details">
                                     <i class="bi bi-eye"></i>
                                 </a>
                                 <a href="#" class="btn btn-sm btn-primary" title="Update Status">
                                     <i class="bi bi-pencil-square"></i>
                                 </a>
+                                <button class="btn btn-sm btn-info ms-1" title="Show Barcode" onclick="showBarcode(<?= $order['id'] ?>)">
+                                    <i class="bi bi-upc-scan"></i>
+                                </button>
                             </td>
                         </tr>
                         <?php endforeach; ?>
@@ -96,6 +93,25 @@
     </div>
 </div>
 
+<!-- Barcode Modal -->
+<div class="modal fade" id="barcodeModal" tabindex="-1" aria-labelledby="barcodeModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="barcodeModalLabel">Order Barcode</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center" id="barcodeContent">
+                <!-- Barcode will be loaded here -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" onclick="printBarcode()">Print</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Custom Styles -->
 <style>
     .table th {
@@ -108,5 +124,42 @@
         padding: 0.25rem 0.5rem;
     }
 </style>
+
+<!-- JavaScript -->
+<script>
+function showBarcode(orderId) {
+    fetch('<?= site_url('admin/generate-barcode/') ?>' + orderId)
+        .then(response => response.text())
+        .then(html => {
+            document.getElementById('barcodeContent').innerHTML = html;
+            new bootstrap.Modal(document.getElementById('barcodeModal')).show();
+        })
+        .catch(error => {
+            console.error('Error loading barcode:', error);
+            alert('Error loading barcode. Please try again.');
+        });
+}
+
+function printBarcode() {
+    const printWindow = window.open('', '_blank');
+    const barcodeContent = document.getElementById('barcodeContent').innerHTML;
+    printWindow.document.write(`
+        <html>
+            <head>
+                <title>Order Barcode</title>
+                <style>
+                    body { text-align: center; margin: 20px; }
+                    img { max-width: 100%; height: auto; }
+                </style>
+            </head>
+            <body>
+                ${barcodeContent}
+            </body>
+        </html>
+    `);
+    printWindow.document.close();
+    printWindow.print();
+}
+</script>
 
 <?= $this->endSection() ?>
