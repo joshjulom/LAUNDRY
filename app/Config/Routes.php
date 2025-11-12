@@ -14,6 +14,10 @@ $routes->get('login', 'Auth::login');
 $routes->post('login', 'Auth::loginPost');
 $routes->get('register', 'Auth::register');
 $routes->post('register', 'Auth::registerPost');
+// Phone verification routes for registration
+$routes->get('register/verify', 'Auth::registerVerify');
+$routes->post('register/verify', 'Auth::registerVerifyPost');
+$routes->post('register/resend', 'Auth::resendVerification');
 $routes->get('logout', 'Auth::logout');
 
 // Dashboards
@@ -50,6 +54,8 @@ $routes->group('staff', ['filter' => 'authGuard:staff'], static function (RouteC
     $routes->get('issues/report', 'Staff::reportIssue');
     $routes->post('issues/report', 'Staff::reportIssuePost');
     $routes->get('chat', 'Staff::chat');
+    $routes->get('scanner', 'Staff::scanner');
+    $routes->post('scanner/scan', 'Staff::scanBarcode');
 });
 
 // Customer Pages

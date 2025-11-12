@@ -11,12 +11,14 @@ class UserSeeder extends Seeder
         $data = [
             [
                 'username'   => 'admin',
+                'email'      => 'admin@example.com',
                 'password'   => password_hash('123456', PASSWORD_BCRYPT),
                 'role'       => 'admin',
                 'created_at' => date('Y-m-d H:i:s'),
             ],
             [
                 'username'   => 'staff',
+                'email'      => 'staff@example.com',
                 'password'   => password_hash('123456', PASSWORD_BCRYPT),
                 'role'       => 'staff',
                 'created_at' => date('Y-m-d H:i:s'),

@@ -27,6 +27,7 @@
         <?php endif; ?>
 
         <form method="post" action="<?= site_url('register') ?>">
+            <?= csrf_field() ?>
             <div class="mb-3">
                 <label>Username</label>
                 <input type="text" name="username" class="form-control"
@@ -39,6 +40,12 @@
                 <input type="email" name="email" class="form-control"
                        value="<?= old('email') ?>" required>
                 <small class="text-muted">We'll use this for order notifications</small>
+            </div>
+
+            <div class="mb-3">
+                <label>Phone Number</label>
+                <input type="text" name="phone" class="form-control" value="<?= old('phone') ?>" required placeholder="e.g. 09171234567">
+                <small class="text-muted">Enter your mobile number (digits only)</small>
             </div>
 
             <div class="mb-3">

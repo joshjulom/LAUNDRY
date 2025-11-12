@@ -148,4 +148,50 @@ class Staff extends BaseController
             'messagesUrl' => site_url('chat/messages')
         ]);
     }
+
+    /**
+     * Render scanner UI (optional separate page)
+     */
+    public function scanner()
+    {
+        return view('staff/scanner', [
+            'title' => 'Barcode Scanner',
+        ]);
+    }
+
+    /**
+     * API endpoint to lookup barcode (works with USB keyboard-wedge scanners)
+     */
+    public function scanBarcode()
+    {
+        $barcode = $this->request->getPost('barcode');
+
+        if (!$barcode) {
+            return $this->response->setJSON([
+                'success' => false,
+                'message' => 'Barcode is required',
+            ]);
+        }
+
+        $orderModel = new OrderModel();
+        $userModel = new UserModel();
+
+        $order = $orderModel->where('barcode', $barcode)->first();
+
+        if (!$order) {
+            return $this->response->setJSON([
+                'success' => false,
+                'message' => 'Order not found with this barcode',
+            ]);
+        }
+
+        $user = $userModel->find($order['user_id']);
+
+        return $this->response->setJSON([
+            'success' => true,
+            'order' => $order,
+            'user' => $user,
+            'message' => 'Order found',
+        ]);
+    }
 }
