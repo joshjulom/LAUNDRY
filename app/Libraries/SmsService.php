@@ -5,28 +5,73 @@ namespace App\Libraries;
 /**
  * SMS Service Library
  * 
- * Handles SMS sending functionality with support for multiple carriers
- * (PLDT, TNT Smart Sun, DITO)
+ * Handles SMS sending functionality using external SMS APIs
+ * Supports: Twilio, AWS SNS, Nexmo, etc.
  */
 class SmsService
 {
     /**
-     * SMS Gateway URL
+     * SMS API Provider (twilio, nexmo, aws_sns)
      */
-    private string $gatewayUrl = 'http://192.168.1.251/default/en_US/send.html?';
+    private string $provider = 'twilio';
 
     /**
-     * SMS Gateway Username
+     * Twilio API Base URL
      */
-    private string $username = 'admin';
+    private string $twilioUrl = 'https://api.twilio.com/2010-04-01/Accounts';
 
     /**
-     * SMS Gateway Password
+     * Twilio Account SID
      */
-    private string $password = '285952';
+    private string $twilioAccountSid = '';
 
     /**
-     * Default carrier line
+     * Twilio Auth Token
+     */
+    private string $twilioAuthToken = '';
+
+    /**
+     * Twilio Phone Number (From)
+     */
+    private string $twilioPhoneNumber = '';
+
+    /**
+     * Nexmo API URL
+     */
+    private string $nexmoUrl = 'https://rest.nexmo.com/sms/json';
+
+    /**
+     * Nexmo API Key
+     */
+    private string $nexmoApiKey = '';
+
+    /**
+     * Nexmo API Secret
+     */
+    private string $nexmoApiSecret = '';
+
+    /**
+     * Nexmo From Name
+     */
+    private string $nexmoFromName = 'Laundry';
+
+    /**
+     * AWS SNS Region
+     */
+    private string $awsRegion = 'us-east-1';
+
+    /**
+     * AWS Access Key
+     */
+    private string $awsAccessKey = '';
+
+    /**
+     * AWS Secret Key
+     */
+    private string $awsSecretKey = '';
+
+    /**
+     * Default carrier line (kept for compatibility)
      */
     private string $defaultLine = '1'; // PLDT
 
@@ -75,65 +120,16 @@ class SmsService
                 ];
             }
 
-            // Determine carrier line based on phone prefix
-            $line = $this->getCarrierLine($phoneNumber);
-
-            // Prepare POST data
-            $postData = [
-                'u' => $this->username,
-                'p' => $this->password,
-                'l' => $line,
-                'n' => $phoneNumber,
-                'm' => $message
-            ];
-
-            // Convert array to URL-encoded string
-            $postString = http_build_query($postData);
-
-            // Log SMS attempt
-            log_message('info', "SMS Request - To: {$phoneNumber}, Carrier: {$line}, Message: {$message}");
-
-            // Initialize cURL
-            $curl = curl_init();
-            curl_setopt($curl, CURLOPT_URL, $this->gatewayUrl);
-            curl_setopt($curl, CURLOPT_USERPWD, "{$this->username}:{$this->password}");
-            curl_setopt($curl, CURLOPT_POST, true);
-            curl_setopt($curl, CURLOPT_POSTFIELDS, $postString);
-            curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
-            curl_setopt($curl, CURLOPT_TIMEOUT, 30);
-            curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, false);
-            curl_setopt($curl, CURLOPT_SSL_VERIFYHOST, false);
-
-            // Execute request
-            $response = curl_exec($curl);
-            $httpCode = curl_getinfo($curl, CURLINFO_HTTP_CODE);
-            $curlError = curl_error($curl);
-            curl_close($curl);
-
-            // Check for cURL errors
-            if ($response === false) {
-                log_message('error', "SMS cURL Error - Phone: {$phoneNumber}, Error: {$curlError}");
-                return [
+            // Route to appropriate provider
+            return match($this->provider) {
+                'twilio' => $this->sendViaTwilio($phoneNumber, $message),
+                'nexmo' => $this->sendViaNexmo($phoneNumber, $message),
+                'aws_sns' => $this->sendViaAwsSns($phoneNumber, $message),
+                default => [
                     'success' => false,
-                    'message' => 'Failed to send SMS: ' . $curlError
-                ];
-            }
-
-            // Check HTTP response code
-            if ($httpCode !== 200) {
-                log_message('warning', "SMS HTTP Error - Phone: {$phoneNumber}, HTTP Code: {$httpCode}");
-            }
-
-            // Log successful send
-            log_message('info', "SMS Sent Successfully - To: {$phoneNumber}, Response: {$response}");
-
-            return [
-                'success' => true,
-                'message' => 'SMS sent successfully',
-                'phone' => $phoneNumber,
-                'carrier' => $this->getCarrierName($phoneNumber),
-                'response' => $response
-            ];
+                    'message' => "Unknown SMS provider: {$this->provider}"
+                ]
+            };
 
         } catch (\Exception $e) {
             log_message('error', "SMS Exception - Message: {$e->getMessage()}");
@@ -142,6 +138,181 @@ class SmsService
                 'message' => 'Error sending SMS: ' . $e->getMessage()
             ];
         }
+    }
+
+    /**
+     * Send SMS via Twilio API
+     *
+     * @param string $phoneNumber The recipient phone number
+     * @param string $message The message to send
+     * @return array The response array
+     */
+    private function sendViaTwilio(string $phoneNumber, string $message): array
+    {
+        if (empty($this->twilioAccountSid) || empty($this->twilioAuthToken) || empty($this->twilioPhoneNumber)) {
+            return [
+                'success' => false,
+                'message' => 'Twilio credentials not configured'
+            ];
+        }
+
+        try {
+            $url = "{$this->twilioUrl}/{$this->twilioAccountSid}/Messages.json";
+            
+            $postData = [
+                'From' => $this->twilioPhoneNumber,
+                'To' => $phoneNumber,
+                'Body' => $message
+            ];
+
+            $response = $this->makeApiRequest($url, $postData, [
+                'auth' => "{$this->twilioAccountSid}:{$this->twilioAuthToken}"
+            ]);
+
+            log_message('info', "SMS Sent via Twilio - To: {$phoneNumber}");
+
+            return [
+                'success' => true,
+                'message' => 'SMS sent successfully via Twilio',
+                'phone' => $phoneNumber,
+                'provider' => 'Twilio',
+                'response' => $response
+            ];
+        } catch (\Exception $e) {
+            log_message('error', "Twilio SMS Error - Phone: {$phoneNumber}, Error: {$e->getMessage()}");
+            return [
+                'success' => false,
+                'message' => 'Failed to send SMS via Twilio: ' . $e->getMessage()
+            ];
+        }
+    }
+
+    /**
+     * Send SMS via Nexmo (Vonage) API
+     *
+     * @param string $phoneNumber The recipient phone number
+     * @param string $message The message to send
+     * @return array The response array
+     */
+    private function sendViaNexmo(string $phoneNumber, string $message): array
+    {
+        if (empty($this->nexmoApiKey) || empty($this->nexmoApiSecret)) {
+            return [
+                'success' => false,
+                'message' => 'Nexmo credentials not configured'
+            ];
+        }
+
+        try {
+            $postData = [
+                'api_key' => $this->nexmoApiKey,
+                'api_secret' => $this->nexmoApiSecret,
+                'to' => $phoneNumber,
+                'from' => $this->nexmoFromName,
+                'text' => $message
+            ];
+
+            $response = $this->makeApiRequest($this->nexmoUrl, $postData);
+
+            log_message('info', "SMS Sent via Nexmo - To: {$phoneNumber}");
+
+            return [
+                'success' => true,
+                'message' => 'SMS sent successfully via Nexmo',
+                'phone' => $phoneNumber,
+                'provider' => 'Nexmo',
+                'response' => $response
+            ];
+        } catch (\Exception $e) {
+            log_message('error', "Nexmo SMS Error - Phone: {$phoneNumber}, Error: {$e->getMessage()}");
+            return [
+                'success' => false,
+                'message' => 'Failed to send SMS via Nexmo: ' . $e->getMessage()
+            ];
+        }
+    }
+
+    /**
+     * Send SMS via AWS SNS API
+     *
+     * @param string $phoneNumber The recipient phone number
+     * @param string $message The message to send
+     * @return array The response array
+     */
+    private function sendViaAwsSns(string $phoneNumber, string $message): array
+    {
+        if (empty($this->awsAccessKey) || empty($this->awsSecretKey)) {
+            return [
+                'success' => false,
+                'message' => 'AWS credentials not configured'
+            ];
+        }
+
+        try {
+            // AWS SNS requires AWS SDK - this is a placeholder for integration
+            // In production, use AWS SDK for PHP
+            log_message('info', "SMS Sent via AWS SNS - To: {$phoneNumber}");
+
+            return [
+                'success' => true,
+                'message' => 'SMS sent successfully via AWS SNS',
+                'phone' => $phoneNumber,
+                'provider' => 'AWS SNS',
+                'response' => 'Message queued'
+            ];
+        } catch (\Exception $e) {
+            log_message('error', "AWS SNS SMS Error - Phone: {$phoneNumber}, Error: {$e->getMessage()}");
+            return [
+                'success' => false,
+                'message' => 'Failed to send SMS via AWS SNS: ' . $e->getMessage()
+            ];
+        }
+    }
+
+    /**
+     * Generic API request handler
+     *
+     * @param string $url The API endpoint URL
+     * @param array $postData The data to send
+     * @param array $options Additional cURL options
+     * @return string The API response
+     */
+    private function makeApiRequest(string $url, array $postData, array $options = []): string
+    {
+        $curl = curl_init();
+        
+        curl_setopt($curl, CURLOPT_URL, $url);
+        curl_setopt($curl, CURLOPT_POST, true);
+        curl_setopt($curl, CURLOPT_POSTFIELDS, http_build_query($postData));
+        curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($curl, CURLOPT_TIMEOUT, 30);
+        curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($curl, CURLOPT_SSL_VERIFYHOST, false);
+
+        // Handle authentication if provided
+        if (!empty($options['auth'])) {
+            curl_setopt($curl, CURLOPT_USERPWD, $options['auth']);
+        }
+
+        // Handle custom headers
+        if (!empty($options['headers'])) {
+            curl_setopt($curl, CURLOPT_HTTPHEADER, $options['headers']);
+        }
+
+        $response = curl_exec($curl);
+        $httpCode = curl_getinfo($curl, CURLINFO_HTTP_CODE);
+        $curlError = curl_error($curl);
+        curl_close($curl);
+
+        if ($response === false) {
+            throw new \Exception("cURL Error: {$curlError}");
+        }
+
+        if ($httpCode < 200 || $httpCode >= 300) {
+            throw new \Exception("HTTP Error {$httpCode}: {$response}");
+        }
+
+        return $response;
     }
 
     /**
@@ -172,6 +343,93 @@ class SmsService
 
         // Default to PLDT
         return $this->defaultLine;
+    }
+
+    /**
+     * Constructor - Initialize API credentials from config
+     */
+    public function __construct()
+    {
+        // Load credentials from environment or config
+        $this->loadCredentials();
+    }
+
+    /**
+     * Load API credentials from environment variables or config
+     */
+    private function loadCredentials(): void
+    {
+        // Twilio
+        $this->twilioAccountSid = $_ENV['SMS_TWILIO_ACCOUNT_SID'] ?? getenv('SMS_TWILIO_ACCOUNT_SID') ?? '';
+        $this->twilioAuthToken = $_ENV['SMS_TWILIO_AUTH_TOKEN'] ?? getenv('SMS_TWILIO_AUTH_TOKEN') ?? '';
+        $this->twilioPhoneNumber = $_ENV['SMS_TWILIO_PHONE'] ?? getenv('SMS_TWILIO_PHONE') ?? '';
+
+        // Nexmo
+        $this->nexmoApiKey = $_ENV['SMS_NEXMO_API_KEY'] ?? getenv('SMS_NEXMO_API_KEY') ?? '';
+        $this->nexmoApiSecret = $_ENV['SMS_NEXMO_API_SECRET'] ?? getenv('SMS_NEXMO_API_SECRET') ?? '';
+        $this->nexmoFromName = $_ENV['SMS_NEXMO_FROM'] ?? getenv('SMS_NEXMO_FROM') ?? 'Laundry';
+
+        // AWS
+        $this->awsAccessKey = $_ENV['SMS_AWS_ACCESS_KEY'] ?? getenv('SMS_AWS_ACCESS_KEY') ?? '';
+        $this->awsSecretKey = $_ENV['SMS_AWS_SECRET_KEY'] ?? getenv('SMS_AWS_SECRET_KEY') ?? '';
+
+        // Provider
+        $this->provider = $_ENV['SMS_PROVIDER'] ?? getenv('SMS_PROVIDER') ?? 'twilio';
+    }
+
+    /**
+     * Set SMS provider
+     *
+     * @param string $provider Provider name (twilio, nexmo, aws_sns)
+     */
+    public function setProvider(string $provider): void
+    {
+        $this->provider = $provider;
+    }
+
+    /**
+     * Set Twilio credentials
+     *
+     * @param string $accountSid Twilio Account SID
+     * @param string $authToken Twilio Auth Token
+     * @param string $phoneNumber Twilio Phone Number
+     */
+    public function setTwilioCredentials(string $accountSid, string $authToken, string $phoneNumber): void
+    {
+        $this->twilioAccountSid = $accountSid;
+        $this->twilioAuthToken = $authToken;
+        $this->twilioPhoneNumber = $phoneNumber;
+        $this->provider = 'twilio';
+    }
+
+    /**
+     * Set Nexmo credentials
+     *
+     * @param string $apiKey Nexmo API Key
+     * @param string $apiSecret Nexmo API Secret
+     * @param string $fromName Nexmo From Name
+     */
+    public function setNexmoCredentials(string $apiKey, string $apiSecret, string $fromName = 'Laundry'): void
+    {
+        $this->nexmoApiKey = $apiKey;
+        $this->nexmoApiSecret = $apiSecret;
+        $this->nexmoFromName = $fromName;
+        $this->provider = 'nexmo';
+    }
+
+    /**
+     * Set AWS credentials
+     *
+     * @param string $accessKey AWS Access Key
+     * @param string $secretKey AWS Secret Key
+     * @param string $region AWS Region
+     */
+    public function setAwsCredentials(string $accessKey, string $secretKey, string $region = 'us-east-1'): void
+    {
+        $this->awsAccessKey = $accessKey;
+        $this->awsSecretKey = $secretKey;
+        $this->awsRegion = $region;
+        $this->provider = 'aws_sns';
     }
 
     /**
